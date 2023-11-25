@@ -9,8 +9,6 @@
             "email": "ykorolov@neklo.com"
         }
     ],
-    "minimum-stability": "dev",
-    "prefer-stable": true,
     "autoload": {
         "psr-4": {
             "Salesmessage\\Monolog\\": "src/Monolog"
