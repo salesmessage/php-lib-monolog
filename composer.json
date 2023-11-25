@@ -1,0 +1,23 @@
+{
+    "name": "salesmessage/monolog",
+    "description": "A library that extends the logging capabilities provided by Monolog.",
+    "type": "library",
+    "license": "proprietary",
+    "authors": [
+        {
+            "name": "Korolev Evgeny",
+            "email": "ykorolov@neklo.com"
+        }
+    ],
+    "minimum-stability": "dev",
+    "prefer-stable": true,
+    "autoload": {
+        "psr-4": {
+            "Salesmessage\\Monolog\\": "src/Monolog"
+        }
+    },
+    "require": {
+        "php": ">=8.0",
+        "monolog/monolog": ">=2.0"
+    }
+}
