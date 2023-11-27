@@ -39,8 +39,8 @@ class SalesmessageLogger
         $logger->withContext([
             'trace_id' => $traceId,
             'client_ip' => $clientIp,
-            'user_id' => $isConsole,
-            'is_console' => $userId
+            'user_id' => $userId,
+            'is_console' => $isConsole
         ]);
 
         foreach ($logger->getHandlers() as $handler) {
