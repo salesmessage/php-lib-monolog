@@ -4,8 +4,10 @@ declare(strict_types=1);
 namespace Salesmessage\Monolog\Formatter;
 
 use Monolog\Formatter\LineFormatter;
+use Monolog\LogRecord;
 use Monolog\Utils;
 use Throwable;
+use Closure;
 
 class SalesmessageFormatter extends LineFormatter
 {
@@ -32,7 +34,7 @@ class SalesmessageFormatter extends LineFormatter
     /**
      * @inheritDoc
      */
-    public function format(array $record): string
+    public function format(LogRecord $record): string
     {
         // add backtrace info
         $record['message'] = $this->backtraceAwareMessage($record['message']);
@@ -185,7 +187,7 @@ class SalesmessageFormatter extends LineFormatter
      * @param callable|null $parser
      * @return $this
      */
-    public function includeStacktraces(bool $include = true, ?callable $parser = null): self
+    public function includeStacktraces(bool $include = true, ?Closure $parser = null): self
     {
         $this->includeStacktraces = $include;
         if ($this->includeStacktraces) {
