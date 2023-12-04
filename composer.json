@@ -21,7 +21,7 @@
     "extra": {
         "laravel": {
             "providers": [
-                "Salesmessage\\Monolog\\LoggerApmServiceProvider"
+                "Salesmessage\\Monolog\\LoggerServiceProvider"
             ]
         }
     }
