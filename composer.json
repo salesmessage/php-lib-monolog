@@ -16,7 +16,7 @@
     },
     "require": {
         "php": ">=8.0",
-        "monolog/monolog": "^2.9"
+        "monolog/monolog": "^2.6"
     },
     "extra": {
         "laravel": {
