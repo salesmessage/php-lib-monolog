@@ -17,5 +17,12 @@
     "require": {
         "php": ">=8.0",
         "monolog/monolog": "^2.9"
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Salesmessage\\Monolog\\LoggerServiceProvider"
+            ]
+        }
     }
 }
