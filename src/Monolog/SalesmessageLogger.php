@@ -7,6 +7,8 @@ use Salesmessage\Monolog\Formatter\SalesmessageFormatter;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Log\Logger;
 use Throwable;
+use Monolog\LogRecord;
+use Monolog\Formatter\LineFormatter;
 
 /**
  * Logging Extender to provide more info and avoid giant logs
@@ -14,6 +16,7 @@ use Throwable;
 class SalesmessageLogger
 {
     private const LINE_FORMATTER_BACKTRACE_DEPTH = 10;
+    private const SYMBOLS_LIMIT = 10000;
 
     /**
      * @param Logger $logger
@@ -36,20 +39,21 @@ class SalesmessageLogger
             $userId = null;
         }
 
-        $logger->withContext([
-            'trace_id' => $traceId,
-            'client_ip' => $clientIp,
-            'user_id' => $userId,
-            'is_console' => $isConsole
-        ]);
-
         foreach ($logger->getHandlers() as $handler) {
-            $handler->pushProcessor(function (array $record) use ($traceId, $clientIp, $isConsole, $userId) {
-                $this->clearAdditionalData($record);
+            $handler->pushProcessor(function (LogRecord $record) use ($traceId, $clientIp, $isConsole, $userId) {
+
+                $extraData = [
+                    'trace_id' => $traceId,
+                    'client_ip' => $clientIp,
+                    'user_id' => $userId,
+                    'is_console' => $isConsole
+                ];
+
+                $this->addToExtra($record, $extraData);
                 $contextBytes = mb_strlen(json_encode($record, JSON_NUMERIC_CHECK), '8bit');
 
-                if ($contextBytes > env('GIANT_LOGS_THRESHOLD', 10000)) {
-                    $record['context']['giant_log_detected'] = true;
+                if ($contextBytes > env('GIANT_LOGS_THRESHOLD', self::SYMBOLS_LIMIT)) {
+                    $this->addToExtra($record, ['giant_log_detected' => true]);
                 }
 
                 return $record;
@@ -63,20 +67,12 @@ class SalesmessageLogger
     }
 
     /**
-     * @param array $data
+     * @param LogRecord $record
+     * @param array $extraData
      * @return void
      */
-    private function clearAdditionalData(array &$data): void
+    private function addToExtra(LogRecord $record, array $extraData): void
     {
-        foreach ($data as &$value) {
-
-            if (is_array($value)) {
-                $this->clearAdditionalData($value);
-            }
-
-            if ($value instanceof Model) {
-                $value = $value->withoutRelations()->setAppends([])->toArray();
-            }
-        }
+        $record->offsetSet('extra', array_merge($record['extra'], $extraData));
     }
 }

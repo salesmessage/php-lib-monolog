@@ -8,6 +8,8 @@ use Monolog\LogRecord;
 use Monolog\Utils;
 use Throwable;
 use Closure;
+use Illuminate\Database\Eloquent\Model;
+use Monolog\Logger;
 
 class SalesmessageFormatter extends LineFormatter
 {
@@ -37,22 +39,53 @@ class SalesmessageFormatter extends LineFormatter
     public function format(LogRecord $record): string
     {
         // add backtrace info
-        $record['message'] = $this->backtraceAwareMessage($record['message']);
+        $message = $this->backtraceAwareMessage($record);
 
-        // inline context fields with the message
-        $record['message'] = self::contextAwareMessage(
-            $record['message'],
-            $record['context'],
+        // inline extra fields with the message
+        $message = self::contextAwareMessage(
+            $message,
+            $record['extra'],
             self::CONTEXT_TO_MESSAGE_FIELDS
         );
 
-        // remove inlined fields from context
-        $record['context'] = self::filterFields(
-            $record['context'],
+        // remove inlined fields from extra
+        $record['extra'] = self::filterFields(
+            $record['extra'],
             self::CONTEXT_TO_MESSAGE_FIELDS
+        );
+
+        $context = $this->clearAdditionalData($record['context']);
+
+        $record = new LogRecord(
+            message: $message,
+            context: $context,
+            level: Logger::toMonologLevel($record['level']),
+            channel: $record['channel'],
+            datetime: $record['datetime'],
+            extra: $record['extra'],
         );
 
         return parent::format($record);
+    }
+
+    /**
+     * @param array $data
+     * @return array
+     */
+    private function clearAdditionalData(array $data): array
+    {
+        foreach ($data as &$value) {
+
+            if (is_array($value)) {
+                $this->clearAdditionalData($value);
+            }
+
+            if ($value instanceof Model) {
+                $value = $value->withoutRelations()->setAppends([])->toArray();
+            }
+        }
+
+        return $data;
     }
 
     /**
@@ -73,16 +106,16 @@ class SalesmessageFormatter extends LineFormatter
      * Adds context fields to the message
      *
      * @param string $message
-     * @param array  $context
+     * @param array  $extraData
      * @param array  $fieldsToAdd
      *
      * @return string
      */
-    private static function contextAwareMessage(string $message, array $context, array $fieldsToAdd): string
+    private static function contextAwareMessage(string $message, array $extraData, array $fieldsToAdd): string
     {
         $strings = [];
         foreach ($fieldsToAdd as $field) {
-            $value = $context[$field] ?? null;
+            $value = $extraData[$field] ?? null;
 
             // skip empty values to reduce the log size
             if (!empty($value)) {
@@ -100,14 +133,14 @@ class SalesmessageFormatter extends LineFormatter
     /**
      * Adds backtrace info to the message
      *
-     * @param string $message
+     * @param LogRecord $record
      *
      * @return string
      */
-    private function backtraceAwareMessage(string $message): string
+    private function backtraceAwareMessage(LogRecord $record): string
     {
         if (!$this->backtraceDepth) {
-            return $message;
+            return $record['message'];
         }
 
         $backtrace = self::backtrace($this->backtraceDepth);
@@ -115,16 +148,26 @@ class SalesmessageFormatter extends LineFormatter
         $parent = array_pop($backtrace);
 
         if (!$parent || !$grandParent) {
-            return $message;
+            return $record['message'];
         }
 
         $class = $grandParent['class'] ?? 'Unknown';
         $class = str_replace('\\', '.', $class);
-
         $function = $grandParent['function'] ?? 'unknown';
         $line = $parent['line'] ?? -1;
+        $message = $record['message'];
 
         return "$class::$function(L$line): $message";
+    }
+
+    /**
+     * @param LogRecord $record
+     * @param array $extraData
+     * @return void
+     */
+    private function addToExtra(LogRecord $record, array $extraData): void
+    {
+        $record->offsetSet('extra', array_merge($record['extra'], $extraData));
     }
 
     /**
